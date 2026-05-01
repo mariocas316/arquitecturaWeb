@@ -23,5 +23,7 @@ services:
       - ./frontend:/app
     environment:
       - API_URL=http://localhost:8000/api
+      - HOST=0.0.0.0
+      - FRONTEND_HOST=0.0.0.0
     depends_on:
       - backend
