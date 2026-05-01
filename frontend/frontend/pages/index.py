@@ -15,6 +15,7 @@ def index_page() -> rx.Component:
             rx.text_area(
                 placeholder="Escribe tu mensaje secreto aquí...",
                 value=AppState.message_to_encrypt,
+                on_change=AppState.set_message_to_encrypt,
                 width="100%",
                 min_height="150px"
             ),
@@ -22,6 +23,7 @@ def index_page() -> rx.Component:
                 placeholder="Contraseña para encriptar",
                 type="password",
                 value=AppState.password_encrypt,
+                on_change=AppState.set_password_encrypt,
                 width="100%"
             ),
             rx.button(

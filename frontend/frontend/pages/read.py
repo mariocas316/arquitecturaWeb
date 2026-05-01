@@ -16,6 +16,7 @@ def read_page() -> rx.Component:
                 placeholder="Contraseña",
                 type="password",
                 value=AppState.password_decrypt,
+                on_change=AppState.set_password_decrypt,
                 width="100%"
             ),
             rx.button(
