@@ -3,8 +3,17 @@ from ..state import AppState
 from ..styles import card_style, page_style
 
 def index_page() -> rx.Component:
+    """
+    Componente visual que representa la página de inicio (Raíz '/').
+    Provee la interfaz gráfica para escribir un mensaje, asignarle
+    una contraseña y generar el link compartido.
+    
+    Returns:
+        rx.Component: El árbol de componentes renderizable de Reflex.
+    """
     return rx.center(
         rx.vstack(
+            # Título y descripción
             rx.heading("Secret Share 🔒", size="8", margin_bottom="4"),
             rx.text(
                 "Crea un mensaje encriptado y compártelo de forma segura. Sin persistencia en base de datos.",
@@ -12,6 +21,8 @@ def index_page() -> rx.Component:
                 margin_bottom="6",
                 text_align="center"
             ),
+            
+            # Área de texto vinculada bidireccionalmente a 'message_to_encrypt'
             rx.text_area(
                 placeholder="Escribe tu mensaje secreto aquí...",
                 value=AppState.message_to_encrypt,
@@ -19,6 +30,8 @@ def index_page() -> rx.Component:
                 width="100%",
                 min_height="150px"
             ),
+            
+            # Input de contraseña vinculado a 'password_encrypt'
             rx.input(
                 placeholder="Contraseña para encriptar",
                 type="password",
@@ -26,6 +39,8 @@ def index_page() -> rx.Component:
                 on_change=AppState.set_password_encrypt,
                 width="100%"
             ),
+            
+            # Botón de acción que invoca 'encrypt_message'
             rx.button(
                 "Encriptar y Generar Link",
                 on_click=AppState.encrypt_message,
@@ -33,6 +48,8 @@ def index_page() -> rx.Component:
                 width="100%",
                 size="3"
             ),
+            
+            # Renderizado condicional de errores
             rx.cond(
                 AppState.error_message != "",
                 rx.callout(
@@ -42,6 +59,8 @@ def index_page() -> rx.Component:
                     width="100%"
                 )
             ),
+            
+            # Renderizado condicional del enlace generado
             rx.cond(
                 AppState.generated_url != "",
                 rx.vstack(

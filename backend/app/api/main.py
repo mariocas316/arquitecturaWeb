@@ -10,10 +10,15 @@ from app.infrastructure.models import MessageDB
 from pydantic import BaseModel
 from typing import Optional
 
+# Crear las tablas en la base de datos a partir de los modelos de SQLAlchemy
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="API CRUD Mensajes Encriptados")
+app = FastAPI(
+    title="API CRUD Mensajes Encriptados",
+    description="Backend con FastAPI que implementa un CRUD y un ORM para el intercambio seguro de mensajes efímeros."
+)
 
+# Configuración de CORS para permitir solicitudes desde el Frontend Reflex
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,17 +27,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Inyección de dependencias (Clean Architecture)
 crypto_adapter = CryptoAdapter()
 encrypt_use_case = EncryptMessageUseCase(crypto_adapter)
 decrypt_use_case = DecryptMessageUseCase(crypto_adapter)
 
 class MessageResponse(BaseModel):
+    """
+    Esquema de respuesta estándar para el CRUD.
+    
+    Attributes:
+        id (str): Identificador único del mensaje en la base de datos.
+        message (Optional[str]): Contenido del mensaje descifrado (sólo disponible en lecturas exitosas).
+    """
     id: str
     message: Optional[str] = None
 
-# CREATE (POST)
+# --- MÉTODOS CRUD ---
+
 @app.post("/api/messages", response_model=MessageResponse)
 def create_message(request: MessageRequest, db: Session = Depends(get_db)):
+    """
+    C (Create): Crea y almacena un nuevo mensaje encriptado en la base de datos.
+    """
     try:
         payload = encrypt_use_case.execute(request.message, request.password)
         db_msg = MessageDB(encrypted_payload=payload)
@@ -43,25 +60,30 @@ def create_message(request: MessageRequest, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# READ (GET)
 @app.get("/api/messages/{msg_id}", response_model=MessageResponse)
 def read_message(msg_id: str, password: str, db: Session = Depends(get_db)):
+    """
+    R (Read): Lee un mensaje encriptado y lo descifra utilizando la contraseña dada en la query.
+    Tras una lectura exitosa, el registro es ELIMINADO de la base de datos para garantizar la privacidad.
+    """
     db_msg = db.query(MessageDB).filter(MessageDB.id == msg_id).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensaje no encontrado")
     
     try:
         message = decrypt_use_case.execute(db_msg.encrypted_payload, password)
-        # Opcional: Borrar al leer para mantener la privacidad
+        # Opcional: Borrar al leer para mantener el diseño original de "cero persistencia"
         db.delete(db_msg)
         db.commit()
         return {"id": msg_id, "message": message}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# UPDATE (PUT)
 @app.put("/api/messages/{msg_id}", response_model=MessageResponse)
 def update_message(msg_id: str, request: MessageRequest, db: Session = Depends(get_db)):
+    """
+    U (Update): Actualiza el contenido encriptado de un mensaje existente.
+    """
     db_msg = db.query(MessageDB).filter(MessageDB.id == msg_id).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensaje no encontrado")
@@ -74,9 +96,11 @@ def update_message(msg_id: str, request: MessageRequest, db: Session = Depends(g
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# DELETE (DELETE)
 @app.delete("/api/messages/{msg_id}")
 def delete_message(msg_id: str, db: Session = Depends(get_db)):
+    """
+    D (Delete): Elimina permanentemente un mensaje de la base de datos sin leerlo.
+    """
     db_msg = db.query(MessageDB).filter(MessageDB.id == msg_id).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensaje no encontrado")

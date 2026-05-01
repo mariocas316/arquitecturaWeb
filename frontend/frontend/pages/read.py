@@ -3,6 +3,14 @@ from ..state import AppState
 from ..styles import card_style, page_style
 
 def read_page() -> rx.Component:
+    """
+    Componente visual para la ruta de lectura ('/read').
+    Permite al usuario ingresar una contraseña para descifrar y visualizar
+    el mensaje encriptado cuya ID viene codificada en la URL de la página.
+    
+    Returns:
+        rx.Component: El árbol de componentes renderizado.
+    """
     return rx.center(
         rx.vstack(
             rx.heading("Mensaje Secreto 📩", size="8", margin_bottom="4"),
@@ -12,6 +20,8 @@ def read_page() -> rx.Component:
                 margin_bottom="6",
                 text_align="center"
             ),
+            
+            # Input para que el receptor introduzca la clave
             rx.input(
                 placeholder="Contraseña",
                 type="password",
@@ -19,6 +29,8 @@ def read_page() -> rx.Component:
                 on_change=AppState.set_password_decrypt,
                 width="100%"
             ),
+            
+            # Invoca la función asíncrona que hace un GET a la API
             rx.button(
                 "Desencriptar",
                 on_click=AppState.decrypt_message,
@@ -26,6 +38,8 @@ def read_page() -> rx.Component:
                 width="100%",
                 size="3"
             ),
+            
+            # Mensaje de error (ej: Contraseña inválida o mensaje destruido)
             rx.cond(
                 AppState.decrypt_error != "",
                 rx.callout(
@@ -35,6 +49,8 @@ def read_page() -> rx.Component:
                     width="100%"
                 )
             ),
+            
+            # Si el descifrado es exitoso, muestra el mensaje
             rx.cond(
                 AppState.decrypted_message != "",
                 rx.vstack(
@@ -52,6 +68,8 @@ def read_page() -> rx.Component:
                     align_items="flex-start"
                 )
             ),
+            
+            # Navegación hacia atrás
             rx.link(
                 "← Crear nuevo mensaje",
                 href="/",
