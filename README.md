@@ -54,13 +54,16 @@ El backend cuenta con pruebas unitarias (`backend/tests/test_api.py`) utilizando
 ### Prerrequisitos del sistema
 
 **Para Linux (Zorin OS / Ubuntu):**
-`ash
+
+```bash
 sudo apt update
 sudo apt install python3-pip python3.12-venv
 ```
 
 **Para Windows:**
+
 Debes tener instalado Python 3.10 o superior. Si usas PowerShell, antes de activar entornos virtuales debes permitir la ejecución de scripts. Abre PowerShell como Administrador (o en tu terminal actual) y ejecuta por única vez:
+
 ```powershell
 Set-ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
@@ -68,7 +71,8 @@ Set-ExecutionPolicy Unrestricted -Scope CurrentUser
 ### Paso 1: Levantar el Backend (FastAPI)
 
 **En Linux (Zorin OS):**
-`ash
+
+```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
@@ -77,6 +81,7 @@ uvicorn app.api.main:app --reload
 ```
 
 **En Windows (PowerShell):**
+
 ```powershell
 cd backend
 python -m venv venv
@@ -92,7 +97,8 @@ uvicorn app.api.main:app --reload
 Abre una **nueva terminal**:
 
 **En Linux (Zorin OS):**
-`ash
+
+```bash
 cd frontend
 python3 -m venv venv
 source venv/bin/activate
@@ -102,6 +108,7 @@ reflex run --backend-port 8001
 ```
 
 **En Windows (PowerShell):**
+
 ```powershell
 cd frontend
 python -m venv venv
@@ -120,6 +127,7 @@ reflex run --backend-port 8001
 Si prefieres no instalar dependencias de Python localmente y evitar problemas de configuración, puedes levantar todo el proyecto (Backend y Frontend) usando Docker Compose.
 
 ### Prerrequisitos
+
 Debes tener instalado [Docker Desktop](https://www.docker.com/products/docker-desktop/) (o Docker y Docker Compose en Linux).
 
 ### Instrucciones
@@ -130,13 +138,15 @@ Debes tener instalado [Docker Desktop](https://www.docker.com/products/docker-de
 ```bash
 docker-compose up --build -d
 ```
+
 *(Nota: Si usas versiones más recientes de Docker, el comando puede ser `docker compose` sin guion).*
 
 3. **¡Listo!** Las aplicaciones estarán disponibles en:
-   - Frontend: ``http://localhost:3000``
-   - Backend API: ``http://localhost:8000``
+   - Frontend: `http://localhost:3000`
+   - Backend API: `http://localhost:8000`
 
 Para detener los contenedores cuando termines, ejecuta:
+
 ```bash
 docker-compose down
 ```
