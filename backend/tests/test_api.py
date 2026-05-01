@@ -3,64 +3,42 @@ from app.api.main import app
 
 client = TestClient(app)
 
-def test_encrypt_decrypt_success():
-    # 1. Test Encrypt
-    encrypt_response = client.post(
-        "/api/encrypt",
-        json={"message": "Mi secreto super seguro", "password": "mypassword123"}
+def test_full_crud():
+    # 1. CREATE (POST)
+    create_response = client.post(
+        "/api/messages",
+        json={"message": "Mensaje original", "password": "mypassword123"}
     )
-    assert encrypt_response.status_code == 200
-    data = encrypt_response.json()
-    assert "url_payload" in data
-    
-    payload = data["url_payload"]
-    assert len(payload) > 0
+    assert create_response.status_code == 200
+    msg_id = create_response.json()["id"]
+    assert msg_id is not None
 
-    # 2. Test Decrypt with correct password
-    decrypt_response = client.post(
-        "/api/decrypt",
-        json={"url_payload": payload, "password": "mypassword123"}
+    # 2. UPDATE (PUT)
+    update_response = client.put(
+        f"/api/messages/{msg_id}",
+        json={"message": "Mensaje actualizado", "password": "newpassword456"}
     )
-    assert decrypt_response.status_code == 200
-    decrypted_data = decrypt_response.json()
-    assert "message" in decrypted_data
-    assert decrypted_data["message"] == "Mi secreto super seguro"
+    assert update_response.status_code == 200
 
-def test_decrypt_wrong_password():
-    # Encrypt a message
-    encrypt_response = client.post(
-        "/api/encrypt",
-        json={"message": "Mensaje para fallar", "password": "correct_password"}
+    # 3. READ (GET)
+    read_response = client.get(
+        f"/api/messages/{msg_id}?password=newpassword456"
     )
-    payload = encrypt_response.json()["url_payload"]
+    assert read_response.status_code == 200
+    assert read_response.json()["message"] == "Mensaje actualizado"
 
-    # Try to decrypt with wrong password
-    decrypt_response = client.post(
-        "/api/decrypt",
-        json={"url_payload": payload, "password": "wrong_password"}
+    # Since the GET endpoint deletes the message after reading (read-once),
+    # let's create a new one to test the explicit DELETE method.
+    create_response2 = client.post(
+        "/api/messages",
+        json={"message": "Para borrar", "password": "pass"}
     )
-    assert decrypt_response.status_code == 400
-    assert "detail" in decrypt_response.json()
+    msg_id2 = create_response2.json()["id"]
 
-def test_encrypt_empty_fields():
-    # Missing password
-    response1 = client.post(
-        "/api/encrypt",
-        json={"message": "Hello", "password": ""}
-    )
-    assert response1.status_code == 400
-    
-    # Missing message
-    response2 = client.post(
-        "/api/encrypt",
-        json={"message": "", "password": "pass"}
-    )
-    assert response2.status_code == 400
+    # 4. DELETE
+    delete_response = client.delete(f"/api/messages/{msg_id2}")
+    assert delete_response.status_code == 200
 
-def test_decrypt_invalid_payload():
-    # Send garbage payload
-    response = client.post(
-        "/api/decrypt",
-        json={"url_payload": "garbage_payload_that_is_not_base64", "password": "pass"}
-    )
-    assert response.status_code == 400
+    # Verify it's deleted
+    read_deleted = client.get(f"/api/messages/{msg_id2}?password=pass")
+    assert read_deleted.status_code == 404

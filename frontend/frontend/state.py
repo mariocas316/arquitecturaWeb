@@ -1,6 +1,5 @@
 import reflex as rx
 import httpx
-import urllib.parse
 
 API_URL = "http://localhost:8000/api"
 
@@ -37,16 +36,13 @@ class AppState(rx.State):
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{API_URL}/encrypt",
+                    f"{API_URL}/messages",
                     json={"message": self.message_to_encrypt, "password": self.password_encrypt}
                 )
                 if response.status_code == 200:
-                    payload = response.json()["url_payload"]
-                    
-                    # We can use localhost:3000 as the default if we can't reliably get self.router.page.host in background task
+                    msg_id = response.json()["id"]
                     host = "localhost:3000"
-                    
-                    self.generated_url = f"http://{host}/read?payload={urllib.parse.quote(payload)}"
+                    self.generated_url = f"http://{host}/read?payload={msg_id}"
                     self.message_to_encrypt = ""
                     self.password_encrypt = ""
                 else:
@@ -58,21 +54,23 @@ class AppState(rx.State):
         self.decrypt_error = ""
         self.decrypted_message = ""
         
-        payload = self.router.page.params.get("payload")
-        if not payload or not self.password_decrypt:
-            self.decrypt_error = "Se requiere el payload (en la URL) y la contraseña."
+        msg_id = self.router.page.params.get("payload")
+        if not msg_id or not self.password_decrypt:
+            self.decrypt_error = "Se requiere el ID en la URL y la contraseña."
             return
             
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(
-                    f"{API_URL}/decrypt",
-                    json={"url_payload": payload, "password": self.password_decrypt}
+                response = await client.get(
+                    f"{API_URL}/messages/{msg_id}",
+                    params={"password": self.password_decrypt}
                 )
                 if response.status_code == 200:
                     self.decrypted_message = response.json()["message"]
                     self.password_decrypt = ""
+                elif response.status_code == 404:
+                    self.decrypt_error = "Mensaje no encontrado o ya fue leído y destruido."
                 else:
-                    self.decrypt_error = response.json().get("detail", "Error al desencriptar")
+                    self.decrypt_error = response.json().get("detail", "Contraseña incorrecta")
             except Exception as e:
                 self.decrypt_error = f"Error de conexión con el servidor: {str(e)}"

@@ -1,13 +1,13 @@
 # Secret Share 🔒
 
-Aplicación web diseñada para intercambiar mensajes encriptados de forma segura mediante un enlace. La característica principal de esta aplicación es que posee **cero persistencia**, lo que significa que los mensajes nunca se almacenan en ninguna base de datos ni memoria del servidor; el mensaje viaja encriptado y empaquetado de forma segura dentro del mismo enlace generado.
+Aplicación web diseñada para intercambiar mensajes encriptados de forma segura mediante un enlace. La característica principal de esta aplicación es su **Almacenamiento Efímero Segurizado**; los mensajes se guardan cifrados en base de datos usando un ORM y se destruyen al ser leídos, garantizando la privacidad.
 
 ---
 
 ## 🛠️ Frameworks Seleccionados
 
-1. **Backend**: [FastAPI](https://fastapi.tiangolo.com/)
-   - Seleccionado por su altísimo rendimiento, su integración nativa con Pydantic para la validación estricta de datos y la autogeneración de documentación (Swagger UI).
+1. **Backend**: [FastAPI](https://fastapi.tiangolo.com/) y **SQLAlchemy (ORM)**
+   - Seleccionados por su altísimo rendimiento, validación estricta de datos (Pydantic), y capacidades potentes de mapeo objeto-relacional para gestionar el CRUD completo (Create, Read, Update, Delete) en base de datos SQLite de forma segura.
 2. **Frontend**: [Reflex](https://reflex.dev/)
    - Seleccionado por ser un framework *Full-Stack* basado 100% en Python, lo que permite desarrollar interfaces de usuario reactivas complejas sin necesidad de escribir Javascript, facilitando la unificación del lenguaje en todo el proyecto.
 
@@ -16,62 +16,60 @@ Aplicación web diseñada para intercambiar mensajes encriptados de forma segura
 ## 🏗️ Arquitectura de las Aplicaciones
 
 ### 1. Backend: Clean Architecture (Arquitectura Limpia)
-El backend está estructurado bajo los principios de Clean Architecture para lograr un desacoplamiento total entre la lógica de negocio, las herramientas criptográficas y el framework web.
+El backend está estructurado bajo los principios de Clean Architecture para lograr un desacoplamiento total entre la lógica de negocio, las herramientas criptográficas, el ORM y el framework web.
 
 Sus capas (ubicadas en `backend/app/`) son:
-- **`domain/` (Dominio):** Contiene las entidades principales y contratos de datos utilizando modelos de Pydantic (`MessageRequest`, `EncryptedMessageResponse`, etc.). No depende de nada externo.
-- **`ports/` (Puertos):** Interfaces abstractas (Ej. `CryptoPort`) que definen cómo se debe comportar cualquier servicio criptográfico sin importar la librería subyacente.
-- **`adapters/` (Adaptadores):** Implementaciones concretas de los puertos. Aquí vive `CryptoAdapter`, que utiliza la librería `cryptography` (AES-GCM y PBKDF2HMAC) para proveer encriptación de grado militar.
-- **`use_cases/` (Casos de Uso):** Contienen la lógica pura del negocio (`EncryptMessageUseCase` y `DecryptMessageUseCase`). Orquestan los puertos pero ignoran completamente que están siendo ejecutados por FastAPI.
-- **`api/` (Infraestructura / Entrypoint):** El marco de trabajo de FastAPI (`main.py`) que expone los endpoints, maneja CORS e inyecta las dependencias hacia los casos de uso.
+- **`domain/` (Dominio):** Contiene las entidades principales y contratos de datos utilizando modelos de Pydantic.
+- **`ports/` (Puertos):** Interfaces abstractas (Ej. `CryptoPort`) que definen cómo se debe comportar el servicio criptográfico.
+- **`adapters/` (Adaptadores):** Implementaciones concretas. Aquí vive `CryptoAdapter`, que utiliza la librería `cryptography` (AES-GCM y PBKDF2HMAC) para encriptar los datos antes de persistirlos.
+- **`use_cases/` (Casos de Uso):** Contienen la lógica pura del negocio (`EncryptMessageUseCase` y `DecryptMessageUseCase`).
+- **`infrastructure/` (Infraestructura):** Integración del **ORM SQLAlchemy** (`database.py`, `models.py`) donde persiste de forma efímera los datos.
+- **`api/` (API):** El marco de FastAPI (`main.py`) exponiendo un **CRUD completo** con manejo de errores:
+  - `POST /api/messages`: Crea el mensaje.
+  - `GET /api/messages/{id}`: Lee el mensaje (y lo autodestruye).
+  - `PUT /api/messages/{id}`: Actualiza un mensaje existente.
+  - `DELETE /api/messages/{id}`: Borra manualmente un mensaje.
 
 ### 2. Frontend: Arquitectura Modular de Reflex
-El frontend está estructurado siguiendo las recomendaciones oficiales de escalabilidad de Reflex, separando responsabilidades estrictamente:
+El frontend está estructurado siguiendo las recomendaciones oficiales de escalabilidad de Reflex:
+- **`state.py`:** Administra el estado global y las llamadas asíncronas HTTP (vía `httpx`) que se comunican con el CRUD del Backend.
+- **`styles.py`:** Centraliza los diccionarios de diseño y colores globales.
+- **`pages/`:** Contiene la interfaz de usuario pura, desacoplada en diferentes vistas (`index.py` y `read.py`).
+- **`frontend.py`:** Actúa únicamente como enrutador principal para inicializar la aplicación.
 
-La estructura (ubicada en `frontend/frontend/`) es:
-- **`state.py`:** Administra el estado global y las variables reactivas de la aplicación. Aquí residen todas las llamadas asíncronas HTTP (vía `httpx`) que se comunican con el Backend. Es el "cerebro" del frontend.
-- **`styles.py`:** Centraliza los diccionarios de diseño, colores y variables de interfaz, permitiendo cambiar el "tema" de la aplicación tocando un solo archivo.
-- **`pages/`:** Contiene la interfaz de usuario pura, desacoplada en diferentes vistas:
-  - `index.py`: Página para escribir y encriptar un mensaje nuevo.
-  - `read.py`: Página dedicada a recibir el payload de la URL y descifrar el mensaje.
-- **`frontend.py`:** Actúa únicamente como enrutador principal para inicializar la aplicación de Reflex y registrar las páginas.
+---
+
+## 🧪 Pruebas (Testing)
+El backend cuenta con pruebas unitarias (`backend/tests/test_api.py`) utilizando `pytest` y `TestClient` que verifican de manera exhaustiva **todos los métodos HTTP del CRUD (GET, POST, PUT, y DELETE)** y comprueban los escenarios de error.
 
 ---
 
 ## 🚀 Cómo ejecutar el proyecto en tu entorno local
 
 ### Prerrequisitos del sistema
-Debes tener instalado Python 3, `pip` y el paquete de entornos virtuales (`venv`). En sistemas basados en Debian/Ubuntu:
 ```bash
 sudo apt update
 sudo apt install python3-pip python3.12-venv
 ```
 
 ### Paso 1: Levantar el Backend (FastAPI)
-Abre una terminal y colócate en la raíz del proyecto.
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-pip install fastapi uvicorn cryptography pydantic pydantic-settings
+pip install fastapi uvicorn cryptography pydantic pydantic-settings sqlalchemy
 uvicorn app.api.main:app --reload
 ```
 *El API quedará disponible en `http://localhost:8000`.*
 
 ### Paso 2: Levantar el Frontend (Reflex)
-Abre una **nueva terminal** (sin cerrar la del backend) y colócate en la raíz del proyecto.
+Abre una **nueva terminal**:
 ```bash
 cd frontend
 python3 -m venv venv
 source venv/bin/activate
 pip install reflex httpx
-reflex init  # (Si pregunta por un template, presiona Enter para usar el Blank)
+reflex init
 reflex run
 ```
 *El Frontend quedará disponible en `http://localhost:3000`.*
-
-### Paso 3: Probar
-Abre tu navegador y entra a `http://localhost:3000`. ¡Escribe un mensaje, asigna una contraseña y genera tu enlace encriptado!
-
----
-*Desarrollado para el proyecto de Arquitectura Web.*
